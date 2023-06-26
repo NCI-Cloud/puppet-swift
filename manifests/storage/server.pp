@@ -4,15 +4,16 @@
 #
 # === Parameters:
 #
-# [*title*] The port the server will be exposed to
-#   Mandatory. Usually 6000, 6001 and 6002 for respectively
-#   object, container and account.
-#
 # [*type*]
 #   (required) The type of device, e.g. account, object, or container.
 #
 # [*storage_local_net_ip*]
 #   (required) This is the ip that the storage service will bind to when it starts.
+#
+# [*bind_port*]
+#   (optional) The port the server will be exposed to Usually 6000, 6001 and
+#   6002 for respectively object, container and account.
+#   Defaults to $name
 #
 # [*devices*]
 #   (optional) The directory where the physical storage device will be mounted.
@@ -198,63 +199,57 @@
 #   Defaults to undef.
 #
 define swift::storage::server(
-  $type,
+  Swift::StorageServerType $type,
   $storage_local_net_ip,
-  $devices                        = '/srv/node',
-  $owner                          = undef,
-  $group                          = undef,
-  $incoming_chmod                 = 'Du=rwx,g=rx,o=rx,Fu=rw,g=r,o=r',
-  $outgoing_chmod                 = 'Du=rwx,g=rx,o=rx,Fu=rw,g=r,o=r',
-  $max_connections                = 25,
-  $pipeline                       = ["${type}-server"],
-  $mount_check                    = true,
-  $servers_per_port               = 0,
-  $user                           = undef,
-  $workers                        = $::os_workers,
-  $replicator_concurrency         = 1,
-  $replicator_interval            = 30,
-  $updater_concurrency            = 1,
-  $reaper_concurrency             = 1,
-  $log_facility                   = 'LOG_LOCAL2',
-  $log_level                      = 'INFO',
-  $log_address                    = '/dev/log',
-  $log_name                       = "${type}-server",
-  $log_udp_host                   = undef,
-  $log_udp_port                   = undef,
-  $log_requests                   = true,
+  $devices                                               = '/srv/node',
+  $owner                                                 = undef,
+  $group                                                 = undef,
+  $incoming_chmod                                        = 'Du=rwx,g=rx,o=rx,Fu=rw,g=r,o=r',
+  $outgoing_chmod                                        = 'Du=rwx,g=rx,o=rx,Fu=rw,g=r,o=r',
+  $max_connections                                       = 25,
+  Swift::Pipeline $pipeline                              = ["${type}-server"],
+  $mount_check                                           = true,
+  $servers_per_port                                      = $facts['os_service_default'],
+  $user                                                  = undef,
+  $workers                                               = $facts['os_workers'],
+  $replicator_concurrency                                = 1,
+  $replicator_interval                                   = $facts['os_service_default'],
+  $updater_concurrency                                   = 1,
+  $reaper_concurrency                                    = 1,
+  $log_facility                                          = 'LOG_LOCAL2',
+  $log_level                                             = 'INFO',
+  $log_address                                           = '/dev/log',
+  $log_name                                              = "${type}-server",
+  $log_udp_host                                          = undef,
+  $log_udp_port                                          = undef,
+  $log_requests                                          = true,
   # this parameters needs to be specified after type and name
-  $config_file_path               = "${type}-server.conf",
-  $statsd_enabled                 = false,
-  $log_statsd_host                = 'localhost',
-  $log_statsd_port                = 8125,
-  $log_statsd_default_sample_rate = '1.0',
-  $log_statsd_sample_rate_factor  = '1.0',
-  $log_statsd_metric_prefix       = '',
-  $network_chunk_size             = 65536,
-  $disk_chunk_size                = 65536,
-  $client_timeout                 = 60,
-  $auditor_disk_chunk_size        = undef,
-  $rsync_timeout                  = 900,
-  $rsync_bwlimit                  = 0,
-  $splice                         = false,
-  $object_server_mb_per_sync      = 512,
+  $config_file_path                                      = "${type}-server.conf",
+  Boolean $statsd_enabled                                = false,
+  $log_statsd_host                                       = 'localhost',
+  $log_statsd_port                                       = $facts['os_service_default'],
+  $log_statsd_default_sample_rate                        = $facts['os_service_default'],
+  $log_statsd_sample_rate_factor                         = $facts['os_service_default'],
+  $log_statsd_metric_prefix                              = $facts['os_service_default'],
+  $network_chunk_size                                    = $facts['os_service_default'],
+  $disk_chunk_size                                       = $facts['os_service_default'],
+  $client_timeout                                        = $facts['os_service_default'],
+  $auditor_disk_chunk_size                               = $facts['os_service_default'],
+  $rsync_timeout                                         = $facts['os_service_default'],
+  $rsync_bwlimit                                         = $facts['os_service_default'],
+  Variant[Openstacklib::ServiceDefault, Boolean] $splice = $facts['os_service_default'],
+  $object_server_mb_per_sync                             = $facts['os_service_default'],
   # These parameters only apply to container-server.conf,
   # and define options for the container-sharder service.
-  $container_sharder_auto_shard   = false,
-  $container_sharder_concurrency  = 8,
-  $container_sharder_interval     = 30,
-  # DEPRECATED PARAMETERS
-  $allow_versions                 = undef,
+  $container_sharder_auto_shard                          = $facts['os_service_default'],
+  $container_sharder_concurrency                         = $facts['os_service_default'],
+  $container_sharder_interval                            = $facts['os_service_default'],
 ){
 
   include swift::deps
   include swift::params
 
   $user_real = pick($user, $::swift::params::user)
-
-  if $allow_versions != undef {
-    warning('The allow_versions parameter is deprecated and will be removed in a future release')
-  }
 
   if ($incoming_chmod == '0644') {
     warning('The default incoming_chmod set to 0644 may yield in error prone directories and will be changed in a later release.')
@@ -276,13 +271,7 @@ define swift::storage::server(
 
   include "::swift::storage::${type}"
 
-  validate_legacy(Pattern[/^\d+$/], 'validate_re', $name, ['^\d+$'])
-  validate_legacy(Enum['object', 'container', 'account'], 'validate_re',
-    $type, ['^object|container|account$'])
-  validate_legacy(Array, 'validate_array', $pipeline)
-  validate_legacy(Boolean, 'validate_bool', $splice)
   # TODO - validate that name is an integer
-
   $bind_port = $name
 
   rsync::server::module { $type:

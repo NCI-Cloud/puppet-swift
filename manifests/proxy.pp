@@ -157,48 +157,44 @@
 #
 class swift::proxy(
   $proxy_local_net_ip,
-  $port                       = '8080',
-  $pipeline                   = [
+  $port                             = '8080',
+  Swift::Pipeline $pipeline         = [
     'catch_errors', 'gatekeeper', 'healthcheck', 'proxy-logging', 'cache',
     'listing_formats', 'tempauth', 'copy', 'proxy-logging', 'proxy-server'],
-  $workers                    = $::os_workers,
-  $allow_account_management   = true,
-  $account_autocreate         = true,
-  $log_headers                = 'False',
-  $log_udp_host               = undef,
-  $log_udp_port               = undef,
-  $log_address                = '/dev/log',
-  $log_level                  = 'INFO',
-  $log_facility               = 'LOG_LOCAL2',
-  $log_handoffs               = true,
-  $log_name                   = 'proxy-server',
-  $cors_allow_origin          = undef,
-  $strict_cors_mode           = true,
-  $object_chunk_size          = 65536,
-  $client_chunk_size          = 65536,
-  $max_containers_per_account = 0,
-  $max_containers_whitelist   = $::os_service_default,
-  $read_affinity              = undef,
-  $write_affinity             = undef,
-  $write_affinity_node_count  = undef,
-  $client_timeout             = undef,
-  $node_timeout               = undef,
-  $recoverable_node_timeout   = undef,
-  $manage_service             = true,
-  $enabled                    = true,
-  $package_ensure             = 'present',
-  $service_provider           = $::swift::params::service_provider,
-  $purge_config               = false,
+  $workers                          = $facts['os_workers'],
+  Boolean $allow_account_management = true,
+  Boolean $account_autocreate       = true,
+  $log_headers                      = 'False',
+  $log_udp_host                     = undef,
+  $log_udp_port                     = undef,
+  $log_address                      = '/dev/log',
+  $log_level                        = 'INFO',
+  $log_facility                     = 'LOG_LOCAL2',
+  $log_handoffs                     = $facts['os_service_default'],
+  $log_name                         = 'proxy-server',
+  $cors_allow_origin                = undef,
+  $strict_cors_mode                 = true,
+  $object_chunk_size                = $facts['os_service_default'],
+  $client_chunk_size                = $facts['os_service_default'],
+  $max_containers_per_account       = $facts['os_service_default'],
+  $max_containers_whitelist         = $facts['os_service_default'],
+  $read_affinity                    = undef,
+  $write_affinity                   = undef,
+  $write_affinity_node_count        = $facts['os_service_default'],
+  $client_timeout                   = $facts['os_service_default'],
+  $node_timeout                     = $facts['os_service_default'],
+  $recoverable_node_timeout         = $facts['os_service_default'],
+  Boolean $manage_service           = true,
+  Boolean $enabled                  = true,
+  $package_ensure                   = 'present',
+  $service_provider                 = $::swift::params::service_provider,
+  $purge_config                     = false,
 ) inherits swift::params {
 
   include swift::deps
   Swift_config<| |> ~> Service['swift-proxy-server']
 
-  validate_legacy(Boolean, 'validate_bool', $account_autocreate)
-  validate_legacy(Boolean, 'validate_bool', $allow_account_management)
-  validate_legacy(Array, 'validate_array', $pipeline)
-
-  if($write_affinity_node_count and ! $write_affinity) {
+  if (!is_service_default($write_affinity_node_count) and !$write_affinity) {
     fail('Usage of write_affinity_node_count requires write_affinity to be set')
   }
 

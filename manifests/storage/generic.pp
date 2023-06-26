@@ -2,6 +2,9 @@
 # needed to deploy each type of storage server.
 #
 # == Parameters
+#  [*type*]
+#    (optional) The type of device, e.g. account, object, or container.
+#
 #  [*enabled*]
 #    (optional) Should the service be enabled to start
 #    at boot. Defaults to true
@@ -31,11 +34,12 @@
 #  Requires Class[swift::storage]
 #
 define swift::storage::generic(
-  $manage_service   = true,
-  $enabled          = true,
-  $package_ensure   = 'present',
-  $config_file_name = "${name}-server.conf",
-  $service_provider = $::swift::params::service_provider
+  Swift::StorageServerType $type = $name,
+  Boolean $manage_service        = true,
+  Boolean $enabled               = true,
+  $package_ensure                = 'present',
+  $config_file_name              = "${name}-server.conf",
+  $service_provider              = $::swift::params::service_provider
 ) {
 
   include swift::deps
@@ -46,12 +50,9 @@ define swift::storage::generic(
   Swift_config<| |> ~> Service["swift-${name}-auditor"]
   Swift_config<| |> ~> Service["swift-${name}-replicator"]
 
-  validate_legacy(Enum['object', 'container', 'account'], 'validate_re',
-    $name, ['^object|container|account$'])
-
-  package { "swift-${name}":
+  package { "swift-${type}":
     ensure => $package_ensure,
-    name   => getvar("::swift::params::${name}_package_name"),
+    name   => getvar("::swift::params::${type}_package_name"),
     tag    => ['openstack', 'swift-package'],
     before => Service["swift-${name}-server", "swift-${name}-replicator"],
   }

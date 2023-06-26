@@ -47,9 +47,9 @@
 #
 class swift::internal_client (
   $user                      = $::swift::params::user,
-  $pipeline                  = ['catch_errors', 'proxy-logging', 'cache', 'proxy-server'],
-  $object_chunk_size         = $::os_service_default,
-  $client_chunk_size         = $::os_service_default,
+  Swift::Pipeline $pipeline  = ['catch_errors', 'proxy-logging', 'cache', 'proxy-server'],
+  $object_chunk_size         = $facts['os_service_default'],
+  $client_chunk_size         = $facts['os_service_default'],
   $read_affinity             = undef,
   $write_affinity            = $::os_service_default,
   $write_affinity_node_count = $::os_service_default,
@@ -59,8 +59,6 @@ class swift::internal_client (
 ) inherits swift::params {
 
   include swift::deps
-
-  validate_legacy(Array, 'validate_array', $pipeline)
 
   if(! member($pipeline, 'proxy-server')) {
     warning('pipeline parameter must contain proxy-server')

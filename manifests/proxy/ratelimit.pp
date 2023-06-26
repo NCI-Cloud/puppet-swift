@@ -41,11 +41,11 @@
 # Copyright 2012 eNovance licensing@enovance.com
 #
 class swift::proxy::ratelimit(
-  $clock_accuracy = 1000,
-  $max_sleep_time_seconds = 60,
-  $log_sleep_time_seconds = 0,
-  $rate_buffer_seconds = 5,
-  $account_ratelimit = 0
+  $clock_accuracy                   = $facts['os_service_default'],
+  $max_sleep_time_seconds           = $facts['os_service_default'],
+  $log_sleep_time_seconds           = $facts['os_service_default'],
+  $rate_buffer_seconds              = $facts['os_service_default'],
+  $account_ratelimit                = $facts['os_service_default'],
 ) {
 
   include swift::deps

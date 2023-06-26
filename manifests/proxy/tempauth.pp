@@ -66,7 +66,7 @@
 #   Guilherme Maluf Balzana <guimalufb@gmail.com>
 #
 class swift::proxy::tempauth (
-  $account_user_list  = [
+  Array[Hash] $account_user_list                                 = [
     {
       'user'    => 'admin',
       'account' => 'admin',
@@ -74,37 +74,17 @@ class swift::proxy::tempauth (
       'groups'  => [ 'admin', 'reseller_admin' ],
     },
   ],
-  $reseller_prefix    = undef,
-  $auth_prefix        = undef,
-  $token_life         = undef,
-  $allow_overrides    = undef,
-  $storage_url_scheme = undef,
+  Optional[String[1]] $reseller_prefix                           = undef,
+  Optional[Pattern[/\/(.*)+\//]] $auth_prefix                    = undef,
+  Optional[Integer[0]] $token_life                               = undef,
+  Optional[Boolean] $allow_overrides                             = undef,
+  Optional[Enum['http', 'https', 'default']] $storage_url_scheme = undef,
 ) {
 
   include swift::deps
 
-  validate_legacy(Array, 'validate_array', $account_user_list)
-
   if ($reseller_prefix) {
-    validate_legacy(String, 'validate_string', $reseller_prefix)
     $reseller_prefix_upcase = upcase($reseller_prefix)
-  }
-
-  if ($token_life) {
-    validate_legacy(Integer, 'validate_integer', $token_life)
-  }
-
-  if ($auth_prefix) {
-    validate_legacy(Pattern[/\/(.*)+\//], 'validate_re', $auth_prefix, ['\/(.*)+\/'])
-  }
-
-  if ($allow_overrides) {
-    validate_legacy(Boolean, 'validate_bool', $allow_overrides)
-  }
-
-  if ($storage_url_scheme) {
-    validate_legacy(Enum['http', 'https', 'default'], 'validate_re',
-      $storage_url_scheme, [['http', 'https', 'default']])
   }
 
   swift_proxy_config {
